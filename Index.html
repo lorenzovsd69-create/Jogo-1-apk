@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Canyon de Mineração Humana 3D</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #5c940d; font-family: sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        #info {
+            position: absolute; top: 10px; left: 10px; color: white;
+            pointer-events: none; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); z-index: 10;
+        }
+        #info h1 { margin: 0 0 5px 0; font-size: 1.4rem; color: #ffd700; }
+        #info p { margin: 0; font-size: 0.85rem; opacity: 0.9; }
+
+        #spawn-btn {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            padding: 15px 35px; font-size: 1.2rem; font-weight: bold; color: white;
+            background: linear-gradient(135deg, #ffd700, #ff8c00); border: none;
+            border-radius: 50px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+            cursor: pointer; z-index: 10; text-shadow: 1px 1px 2px black;
+            -webkit-tap-highlight-color: transparent; transition: transform 0.1s;
+        }
+        #spawn-btn:active { transform: translateX(-50%) scale(0.95); }
+
+        #btn-abrir-mercado {
+            position: absolute; top: 15px; right: 15px; padding: 10px 20px;
+            font-size: 1rem; font-weight: bold; background: #2196F3; color: white;
+            border: none; border-radius: 8px; cursor: pointer; z-index: 10;
+        }
+
+        #painel-mercado {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: rgba(15, 20, 25, 0.96); z-index: 200;
+            display: none; flex-direction: column; align-items: center;
+        }
+
+        .mercado-header { width: 100%; text-align: center; padding: 15px 0 5px 0; color: #ffd700; flex-shrink: 0; }
+        .mercado-header h2 { margin: 0 0 5px 0; font-size: 1.4rem; }
+
+        .mercado-scroll {
+            width: 100%; max-width: 500px; flex-grow: 1; overflow-y: auto;
+            -webkit-overflow-scrolling: touch; padding: 10px 0;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        .btn-upgrade {
+            width: 90%; max-width: 400px; margin: 6px 0; padding: 12px;
+            font-size: 0.95rem; font-weight: bold; color: white; border: none;
+            border-radius: 8px; cursor: pointer; text-align: center; flex-shrink: 0;
+        }
+
+        .mercado-footer { width: 100%; text-align: center; padding: 15px 0; flex-shrink: 0; }
+        #btn-voltar { padding: 12px 40px; background: #e74c3c; color: white; font-size: 1rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; }
+
+        .mercado-scroll::-webkit-scrollbar { width: 8px; }
+        .mercado-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        .mercado-scroll::-webkit-scrollbar-thumb { background: #ffd700; border-radius: 4px; }
+                /*         /* ========================================================
+           ESTILOS DO MENU INICIAL COM SUB-MENU DE ESCAVAÇÃO
+           ======================================================== */
+        #tela-menu-inicial {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(to bottom, rgba(10, 20, 30, 0.75), rgba(0, 0, 0, 0.9));
+            z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+            transition: opacity 0.5s ease;
+        }
+
+        .menu-container {
+            text-align: center; max-width: 450px; width: 85%;
+            background: rgba(20, 30, 45, 0.85); border: 2px solid #ffd700;
+            border-radius: 20px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+        }
+
+        .menu-titulo {
+            font-size: 2.2rem; color: #ffd700; margin: 0 0 10px 0;
+            text-shadow: 0 4px 10px rgba(255, 215, 0, 0.4); letter-spacing: 1px;
+        }
+
+        .menu-descricao { color: #ecf0f1; font-size: 0.95rem; line-height: 1.5; margin-bottom: 25px; opacity: 0.9; }
+
+        .btn-menu {
+            width: 100%; padding: 14px; margin: 10px 0; font-size: 1.1rem; font-weight: bold;
+            color: white; border: none; border-radius: 12px; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn-menu:active { transform: scale(0.96); }
+
+        #btn-abrir-opcoes { background: linear-gradient(135deg, #2ecc71, #27ae60); border-bottom: 4px solid #1e8449; }
+        #btn-continuar { background: linear-gradient(135deg, #27ae60, #1e8449); border-bottom: 4px solid #145a32; display: none; }
+        #btn-reiniciar { background: linear-gradient(135deg, #e67e22, #d35400); border-bottom: 4px solid #a04000; display: none; }
+        #btn-creditos { background: linear-gradient(135deg, #7f8c8d, #34495e); border-bottom: 4px solid #2c3e50; }
+
+        /* Janela Flutuante de Créditos */
+        #janela-creditos {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+            width: 80%; max-width: 380px; background: #1a252f; border: 2px solid #7f8c8d;
+            border-radius: 15px; padding: 25px; z-index: 600; display: none;
+            color: white; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            transition: all 0.3s ease;
+        }
+        #janela-creditos h3 { color: #ffd700; margin-top: 0; }
+        #btn-fechar-creditos { background: #e74c3c; color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: bold; margin-top: 15px; cursor: pointer; }
+
+
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+</head>
+<body>
+  
+        <div id="tela-menu-inicial">
+        <div class="menu-container" style="max-width: 500px;">
+            <h1 class="menu-titulo">IMPÉRIO DA MINERAÇÃO</h1>
+            
+            <div style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 10px; margin-bottom: 15px; border: 1px dashed #ffd700;">
+                <span style="color: #ecf0f1; font-size: 0.85rem; block;">💼 SEU SALDO PESSOAL (LUCRO LÍQUIDO):</span>
+                <div id="menu-saldo-pessoal" style="font-size: 1.8rem; font-weight: bold; color: #2ecc71;">R$ 0</div>
+            </div>
+
+            <p id="texto-menu-dinamico" class="menu-descricao" style="margin-bottom: 15px;">
+                Gerencie seus investimentos. Use seu lucro pessoal para comprar novas mineradoras com multiplicadores de ouro massivos!
+            </p>
+            
+            <button id="btn-abrir-opcoes" class="btn-menu">INICIAR ESCAVAÇÃO</button>
+            <button id="btn-continuar" class="btn-menu">▶️ CONTINUAR EM: CANYON</button>
+            <button id="btn-reiniciar" class="btn-menu">🔄 REINICIAR IMPÉRIO DO ZERO</button>
+
+            <div style="margin-top: 15px; text-align: left;">
+                <h3 style="color: #ffd700; font-size: 1rem; margin: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 3px;">🏢 COMPRAR / VIAJAR PARA MINERADORAS:</h3>
+                <div style="display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; padding-right: 5px;">
+                    <button onclick="viajarParaMineradora('canyon'); atualizarUIIMperio();" style="width:100%; text-align:left; padding: 8px; background:#2c3e50; color:white; border:1px solid #7f8c8d; border-radius:6px; cursor:pointer;">⛰️ Canyon Inicial (Ativo - 1x Ouro)</button>
+                    <button id="btn-mapa-agua" onclick="viajarParaMineradora('agua'); atualizarUIIMperio();" style="width:100%; text-align:left; padding: 8px; background:#566573; color:rgba(255,255,255,0.6); border:1px solid #7f8c8d; border-radius:6px; cursor:pointer;">🌊 Vale Aquático (Custo: R$ 10.000) [2.5x Ouro]</button>
+                    <button id="btn-mapa-caverna" onclick="viajarParaMineradora('caverna'); atualizarUIIMperio();" style="width:100%; text-align:left; padding: 8px; background:#566573; color:rgba(255,255,255,0.6); border:1px solid #7f8c8d; border-radius:6px; cursor:pointer;">🌋 Mina de Caverna (Custo: R$ 25.000) [5x Ouro]</button>
+                    <button id="btn-mapa-aberta" onclick="viajarParaMineradora('aberta'); atualizarUIIMperio();" style="width:100%; text-align:left; padding: 8px; background:#566573; color:rgba(255,255,255,0.6); border:1px solid #7f8c8d; border-radius:6px; cursor:pointer;">⛏️ Corta-Montanhas (Custo: R$ 60.000) [12x Ouro]</button>
+                    <button id="btn-mapa-cidade" onclick="viajarParaMineradora('cidade'); atualizarUIIMperio();" style="width:100%; text-align:left; padding: 8px; background:#566573; color:rgba(255,255,255,0.6); border:1px solid #7f8c8d; border-radius:6px; cursor:pointer;">🏙️ Distrito Urbano (Custo: R$ 150.000) [30x Ouro]</button>
+                </div>
+            </div>
+            
+            <button id="btn-creditos" class="btn-menu" style="margin-top: 15px; padding: 8px; font-size: 0.9rem;">CRÉDITOS</button>
+        </div>
+    </div>
+
+
+    <button id="btn-abrir-mercado">🛒 MERCADO</button>
+    <div id="placar-saldo-pessoal-direto" style="position: absolute; top: 60px; right: 15px; background: rgba(15, 20, 25, 0.85); color: #2ecc71; padding: 8px 15px; border-radius: 6px; font-weight: bold; font-family: sans-serif; font-size: 0.9rem; border: 1px solid #ffd700; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10;">
+    💼 Seu Bolso: <span id="contador-saldo-direto">R$ 0,00</span>
+</div>
+
+    <button id="spawn-btn">EXTRAIR OURO</button>
+
+    <div id="canvas-container"></div>
+<script>
+(function() {
+    let audioCtx = null;
+
+    // Destravador oficial exigido pelos navegadores
+    window.LoviduAudioEngine_Ativar = function() {
+        try {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            console.log("🎵 [ÁUDIO] Canal de mineração liberado!");
+        } catch(e) {
+            console.warn("Navegador barrou o áudio:", e);
+        }
+    };
+
+    // 🔨 SOM DE PEDRA COESA QUEBRANDO (Abafado e Pesado - Sem estalos de fogos)
+    function tocarSomPedraQuebrando() {
+        if (!audioCtx || audioCtx.state === 'suspended') return;
+
+        const tempoAtual = audioCtx.currentTime;
+
+        // 1. O GOLPE INICIAL (O impacto da ferramenta)
+        const oscGolpe = audioCtx.createOscillator();
+        const ganhoGolpe = audioCtx.createGain();
+        
+        oscGolpe.type = 'triangle';
+        oscGolpe.frequency.setValueAtTime(90, tempoAtual); // Frequência bem grave de impacto
+        oscGolpe.frequency.linearRampToValueAtTime(30, tempoAtual + 0.08);
+        
+        ganhoGolpe.gain.setValueAtTime(0.5, tempoAtual);
+        ganhoGolpe.gain.exponentialRampToValueAtTime(0.001, tempoAtual + 0.1);
+        
+        oscGolpe.connect(ganhoGolpe);
+        ganhoGolpe.connect(audioCtx.destination);
+
+        // 2. O DESMORONAMENTO DA ROCHA (Som opaco de pedra rachando e cedendo)
+        const oscRocha = audioCtx.createOscillator();
+        const filtroRocha = audioCtx.createBiquadFilter();
+        const ganhoRocha = audioCtx.createGain();
+
+        // Onda dente de serra distorce o som para parecer atrito de pedra rachando
+        oscRocha.type = 'sawtooth'; 
+        oscRocha.frequency.setValueAtTime(60, tempoAtual);
+        oscRocha.frequency.linearRampToValueAtTime(20, tempoAtual + 0.35);
+
+        // Filtro passa-baixa ultra agressivo elimina agudos (tira o efeito de fogos de artifício)
+        filtroRocha.type = 'lowpass';
+        filtroRocha.frequency.setValueAtTime(220, tempoAtual); // Corta tudo acima de 220Hz (som só de terra/pedra pesada)
+        filtroRocha.frequency.linearRampToValueAtTime(80, tempoAtual + 0.35);
+
+        // Controla a duração do som da pedra caindo (0.35 segundos)
+        ganhoRocha.gain.setValueAtTime(0.25, tempoAtual);
+        ganhoRocha.gain.exponentialRampToValueAtTime(0.001, tempoAtual + 0.35);
+
+        oscRocha.connect(filtroRocha);
+        filtroRocha.connect(ganhoRocha);
+        ganhoRocha.connect(audioCtx.destination);
+
+        // Ativa os geradores de som
+        oscGolpe.start(tempoAtual);
+        oscGolpe.stop(tempoAtual + 0.1);
+        
+        oscRocha.start(tempoAtual);
+        oscRocha.stop(tempoAtual + 0.35);
+    }
+
+    // 🔄 LOOP COM RITMO DE TRABALHO (Pausas curtas e naturais)
+    function loopEfeitoSonoroMineracao() {
+        const menuInicial = document.getElementById('tela-menu-inicial');
+        const loadingScreen = document.getElementById('tela-loading-sistema');
+
+        const jogoEstaAtivo = menuInicial && 
+                              (menuInicial.style.display === 'none' || menuInicial.style.opacity === '0') &&
+                              (!loadingScreen || loadingScreen.style.display === 'none');
+
+        if (jogoEstaAtivo) {
+            tocarSomPedraQuebrando();
+        }
+
+        // 👇 RITMO PERFEITO: Dá uma batida e espera entre 1.0 e 2.0 segundos antes da próxima.
+        // O som dura 0.35 segundos, então fica um silêncio curto de mais ou menos 1 segundo.
+        const proximoGolpe = Math.random() * 1000 + 1000; 
+        setTimeout(loopEfeitoSonoroMineracao, proximoGolpe);
+    }
+
+    // Monitora a ativação inicial do motor
+    setInterval(() => {
+        if (audioCtx && audioCtx.state === 'running') {
+            loopEfeitoSonoroMineracao();
+        }
+    }, 1000);
+
+    window.addEventListener('click', window.LoviduAudioEngine_Ativar);
+})();
+</script>
+<script>
+(function() {
+    let audioCtx = null;
+
+    // Destravador oficial exigido pelos navegadores
+    window.LoviduAudioEngine_Ativar = function() {
+        try {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            console.log("🎵 [ÁUDIO] Canal de raspagem de pedra ativado!");
+        } catch(e) {
+            console.warn("Navegador barrou o áudio:", e);
+        }
+    };
+
+    // 🔨 REPRODUÇÃO DO VÍDEO: ROCHA ARRASTANDO E ENCAIXANDO
+    function tocarSomPedraArrastando() {
+        if (!audioCtx || audioCtx.state === 'suspended') return;
+
+        const tempoAtual = audioCtx.currentTime;
+        const duracaoArrasto = 1.2; // Tempo em segundos que a rocha fica deslizando/raspando
+
+        // 1. O SOM DO ARRASTO (Frequência super grave e instável para simular atrito)
+        const oscArrasto = audioCtx.createOscillator();
+        const filtroArrasto = audioCtx.createBiquadFilter();
+        const ganhoArrasto = audioCtx.createGain();
+
+        // Onda dente de serra dá a textura áspera da rocha raspando
+        oscArrasto.type = 'sawtooth';
+        oscArrasto.frequency.setValueAtTime(45, tempoAtual);
+        // Pequena variação para imitar a pedra passando por imperfeições no chão
+        oscArrasto.frequency.linearRampToValueAtTime(35, tempoAtual + duracaoArrasto);
+
+        // Filtro passa-baixa corta todo o agudo deixando o som abafado igual ao do vídeo
+        filtroArrasto.type = 'lowpass';
+        filtroArrasto.frequency.setValueAtTime(140, tempoAtual); 
+        filtroArrasto.frequency.linearRampToValueAtTime(90, tempoAtual + duracaoArrasto);
+
+        // Controle de volume do deslizamento
+        ganhoArrasto.gain.setValueAtTime(0.001, tempoAtual);
+        ganhoArrasto.gain.linearRampToValueAtTime(0.35, tempoAtual + 0.2); // Fade-in rápido do início do movimento
+        ganhoArrasto.gain.setValueAtTime(0.35, tempoAtual + duracaoArrasto - 0.1);
+        ganhoArrasto.gain.linearRampToValueAtTime(0.001, tempoAtual + duracaoArrasto); // Some quando para
+
+        oscArrasto.connect(filtroArrasto);
+        filtroArrasto.connect(ganhoArrasto);
+        ganhoArrasto.connect(audioCtx.destination);
+
+        // 2. O IMPACTO FINAL (O baque seco quando a pedra para de correr)
+        const tempoImpacto = tempoAtual + duracaoArrasto - 0.15;
+        const oscBaque = audioCtx.createOscillator();
+        const ganhoBaque = audioCtx.createGain();
+
+        oscBaque.type = 'triangle';
+        oscBaque.frequency.setValueAtTime(75, tempoImpacto);
+        oscBaque.frequency.linearRampToValueAtTime(20, tempoImpacto + 0.2);
+
+        ganhoBaque.gain.setValueAtTime(0.4, tempoImpacto);
+        ganhoBaque.gain.exponentialRampToValueAtTime(0.001, tempoImpacto + 0.2);
+
+        oscBaque.connect(ganhoBaque);
+        ganhoBaque.connect(audioCtx.destination);
+
+        // Inicialização dos motores de som
+        oscArrasto.start(tempoAtual);
+        oscArrasto.stop(tempoAtual + duracaoArrasto);
+
+        oscBaque.start(tempoImpacto);
+        oscBaque.stop(tempoImpacto + 0.2);
+    }
+
+    // 🔄 LOOP CONTROLADO (Ritmo de trabalho constante com pausas)
+    function loopEfeitoSonoroMineracao() {
+        const menuInicial = document.getElementById('tela-menu-inicial');
+        const loadingScreen = document.getElementById('tela-loading-sistema');
+
+        const jogoEstaAtivo = menuInicial && 
+                              (menuInicial.style.display === 'none' || menuInicial.style.opacity === '0') &&
+                              (!loadingScreen || loadingScreen.style.display === 'none');
+
+        if (jogoEstaAtivo) {
+            tocarSomPedraArrastando();
+        }
+
+        // Como o som dura 1.2 segundos, colocamos uma pausa curta de aproximadamente 1 a 1.5 segundos entre um arrasto e outro
+        const proximoGolpe = duracaoArrasto * 1000 + (Math.random() * 500 + 1000); 
+        setTimeout(loopEfeitoSonoroMineracao, proximoGolpe);
+    }
+
+    // Monitora o estado ativo do som
+    setInterval(() => {
+        if (audioCtx && audioCtx.state === 'running') {
+            loopEfeitoSonoroMineracao();
+        }
+    }, 1000);
+
+    window.addEventListener('click', window.LoviduAudioEngine_Ativar);
+})();
+</script>
+
+    <script>
+      
+        // --- 1. VARIÁVEIS GLOBAIS DE CONTROLE ---
+        const balls = [];
+        let dinheiro = 0;
+        let valorPorEsfera = 1;      
+        let esferasPorSegundo = 0;   
+        let precoUpgradeValor = 50;  
+        let precoUpgradeAuto = 50;   
+        let tamanhoEsfera = 1.2;       
+        let precoUpgradeTamanho = 150;  
+
+        let nivelGravidade = 12.0; 
+        let precoUpgradeGravidade = 100;
+        let nivelQuique = 0.25;
+        let precoUpgradeQuique = 120;
+        let nivelAtrito = 0.4;
+        let precoUpgradeAtrito = 80;
+
+        let cameraTarget = new THREE.Vector3(0, 2, -2); 
+        let cameraRadius = 22;                         
+        let theta = 0; let phi = Math.PI / 3.4;
+        let targetTheta = 0; let targetPhi = Math.PI / 3.4;
+        // ========================================================
+// SISTEMA ECONÔMICO AVANÇADO: LUCRO PESSOAL E IMPÉRIO
+// ========================================================
+
+// Novos Saldos
+let saldoPessoal = 0;       // Seu dinheiro real (Lucro Líquido)
+let faturamentoAcumulado = 0; // Controla a cada R$ 2500 para gerar R$ 100 de lucro
+let mineradoraAtual = "canyon"; // Controla qual mapa está ativo: 'canyon', 'agua', 'caverna', 'aberta', 'cidade'
+
+// Multiplicador de Produção do Mapa Atual
+let multiplicadorMapa = 1.0;
+
+// Configuração e Preço das Próximas Mineradoras
+const catalogoMineradoras = {
+    canyon:  { nome: "Canyon Inicial",  custo: 0,     multiplicador: 1.0, corChao: 0x4d7328, corFog: 0x82b1ff },
+    agua:    { nome: "Vale Aquático",   custo: 10000, multiplicador: 2.5, corChao: 0x1f618d, corFog: 0x5dade2 },
+    caverna: { nome: "Mina de Caverna", custo: 25000, multiplicador: 5.0, corChao: 0x2c3e50, corFog: 0x1a252f },
+    aberta:  { nome: "Corta-Montanhas", custo: 60000, multiplicador: 12.0,corChao: 0x6e2c00, corFog: 0xedbb99 },
+    cidade:  { nome: "Distrito Urbano", custo: 150000,multiplicador: 30.0,corChao: 0x283747, corFog: 0x566573 }
+};
+
+// Registro de quais mapas você já comprou (true = comprado)
+let mapasComprados = {
+    canyon: true,
+    agua: false,
+    caverna: false,
+    aberta: false,
+    cidade: false
+};
+
+// --- FUNÇÃO CRUCIAL: PROCESSADOR DE FLUXO DE CAIXA ---
+// Chamada automaticamente toda vez que uma bolinha toca o chão
+function processarGanhoMineradora(valorGanho) {
+    // Aplica o bônus de investimento do mapa atual
+    let valorComMultiplicador = valorGanho * multiplicadorMapa;
+    dinheiro += valorComMultiplicador;
+    faturamentoAcumulado += valorComMultiplicador;
+
+    // Regra: A cada R$ 2.500 faturados brutos pela mineradora (pagando água, luz, funcionários)...
+    if (faturamentoAcumulado >= 2500) {
+        let blocosDeLucro = Math.floor(faturamentoAcumulado / 2500);
+        saldoPessoal += blocosDeLucro * 100; // ...você recebe R$ 100 de Lucro Líquido no seu bolso!
+        faturamentoAcumulado %= 2500;       // Sobra o resto para a próxima meta
+        
+        // Pequeno alerta visual flutuante ou no console informando despesas pagas
+        console.log(`💼 Despesas Pagas! R$ ${blocosDeLucro * 100} de Lucro adicionado ao seu Saldo Pessoal.`);
+    }
+}
+
+// --- FUNÇÃO DE EXPANSÃO: TROCAR OU COMPRAR MINERADORA ---
+function viajarParaMineradora(idMapa) {
+    const mapa = catalogoMineradoras[idMapa];
+    
+    // Caso 1: Você já é dono dessa mineradora -> Só viaja para ela
+    if (mapasComprados[idMapa]) {
+        mineradoraAtual = idMapa;
+        multiplicadorMapa = mapa.multiplicador;
+        
+        // Altera visualmente o chão e o clima do cenário 3D em tempo real!
+        if (typeof floorMesh !== 'undefined' && typeof scene !== 'undefined') {
+            floorMesh.material.color.setHex(mapa.corChao);
+            scene.background.setHex(mapa.corFog);
+            scene.fog.color.setHex(mapa.corFog);
+        }
+        alert(`Viajando para: ${mapa.nome}! Multiplicador de Ouro ativo: ${mapa.multiplicador}x`);
+        return true;
+    } 
+    
+    // Caso 2: Você NÃO é dono -> Tenta comprar usando seu Saldo Pessoal
+    else {
+        if (saldoPessoal >= mapa.custo) {
+            saldoPessoal -= mapa.custo;
+            mapasComprados[idMapa] = true;
+            mineradoraAtual = idMapa;
+            multiplicadorMapa = mapa.multiplicador;
+            
+            // Aplica os visuais do novo investimento
+            if (typeof floorMesh !== 'undefined' && typeof scene !== 'undefined') {
+                floorMesh.material.color.setHex(mapa.corChao);
+                scene.background.setHex(mapa.corFog);
+                scene.fog.color.setHex(mapa.corFog);
+            }
+            alert(`🎉 PARABÉNS! Você comprou a mineradora: ${mapa.nome} por R$ ${mapa.custo} do seu Saldo Pessoal!`);
+            return true;
+        } else {
+            alert(`❌ Saldo Pessoal Insuficiente! Você precisa de R$ ${mapa.custo} no seu bolso. Continue lucrando com suas mineradoras ativas.`);
+            return false;
+        }
+    }
+}
+
+
+        const sensitivity = 0.012; const easing = 0.1; 
+
+        // --- 2. CONFIGURAÇÃO DO MUNDO FÍSICO (CANNON.JS) ---
+        const world = new CANNON.World();
+        world.gravity.set(0, -nivelGravidade, 0); 
+        world.broadphase = new CANNON.NaiveBroadphase();
+        world.solver.iterations = 8;
+
+        const groundMaterial = new CANNON.Material("groundMaterial");
+        const ballMaterial = new CANNON.Material("ballMaterial");
+        
+        let contactMaterial = new CANNON.ContactMaterial(groundMaterial, ballMaterial, {
+            friction: nivelAtrito, restitution: nivelQuique 
+        });
+        world.addContactMaterial(contactMaterial);
+
+        // --- 3. CONFIGURAÇÃO VISUAL (THREE.JS) ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x94c1f0); 
+        scene.fog = new THREE.FogExp2(0x94c1f0, 0.015); 
+
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+        renderer.toneMapping = THREE.ACESFilmicToneMapping; 
+        renderer.toneMappingExposure = 1.1;
+        container.appendChild(renderer.domElement);
+        // --- 4. FUNÇÕES DE SISTEMA DA CÂMERA ---
+        function updateCameraPosition() {
+            phi = Math.max(0.1, Math.min(Math.PI / 2 - 0.05, phi)); 
+            camera.position.x = cameraTarget.x + cameraRadius * Math.sin(phi) * Math.sin(theta);
+            camera.position.y = cameraTarget.y + cameraRadius * Math.cos(phi);
+            camera.position.z = cameraTarget.z + cameraRadius * Math.sin(phi) * Math.cos(theta);
+            camera.lookAt(cameraTarget);
+        }
+        
+        updateCameraPosition(); 
+
+        function updateCameraSmoothly() {
+            theta += (targetTheta - theta) * easing;
+            phi += (targetPhi - phi) * easing;
+            updateCameraPosition();
+        }
+
+        // --- 5. ILUMINAÇÃO DE AMBIENTE CORRIGIDA ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.65); 
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xfff3db, 1.4); 
+        sunLight.position.set(25, 45, 20);
+        sunLight.castShadow = true;
+
+        // 👇 RESOLUÇÃO DA TEXTURA DA SOMBRA (Deixa as bordas mais nítidas)
+        sunLight.shadow.mapSize.width = 2048; // Aumentado de 1024 para 2048
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.bias = -0.0005;
+
+        // 👇 A MÁGICA ESTÁ AQUI: AUMENTANDO A ÁREA DE ALCANCE DA SOMBRA
+        // Aumentamos o tamanho do "quadrado" invisível para 40 unidades em todas as direções
+        sunLight.shadow.camera.left = -40;
+        sunLight.shadow.camera.right = 40;
+        sunLight.shadow.camera.top = 40;
+        sunLight.shadow.camera.bottom = -40;
+
+        // Controla a distância mínima e máxima que a luz "enxerga" para projetar sombra
+        sunLight.shadow.camera.near = 0.1;
+        sunLight.shadow.camera.far = 120;
+
+        scene.add(sunLight);
+
+
+        // --- 6. CONSTRUÇÃO DO CENÁRIO DE MINERAÇÃO ---
+        const floorGeo = new THREE.PlaneGeometry(150, 150);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x557a2b, roughness: 0.9 });
+        const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+        floorMesh.rotation.x = -Math.PI / 2;
+        floorMesh.receiveShadow = true;
+        scene.add(floorMesh);
+
+        const groundShape = new CANNON.Plane();
+        const groundBody = new CANNON.Body({ mass: 0, material: groundMaterial });
+        groundBody.addShape(groundShape);
+        groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+        world.addBody(groundBody);
+
+        // Cadeia de Montanhas ao Redor
+        const mountainGroup = new THREE.Group();
+        const mGeo = new THREE.ConeGeometry(9, 20, 5);
+        const mMat = new THREE.MeshStandardMaterial({ color: 0x645a50, roughness: 0.95, flatShading: true });
+        for (let i = 0; i < 24; i++) {
+            const angle = (i / 24) * Math.PI * 2;
+            const radius = 23 + Math.random() * 3;
+            const mountain = new THREE.Mesh(mGeo, mMat);
+            mountain.position.set(Math.cos(angle) * radius, 7 + Math.random() * 3, Math.sin(angle) * radius);
+            mountain.scale.set(1 + Math.random() * 0.4, 1 + Math.random() * 0.5, 1 + Math.random() * 0.4);
+            mountain.castShadow = true; mountain.receiveShadow = true;
+            mountainGroup.add(mountain);
+        }
+        scene.add(mountainGroup);
+
+        // Entrada da Mina Detalhada com Vigas e Trilho
+        const minaGroup = new THREE.Group();
+        const portalGeo = new THREE.BoxGeometry(7, 6.5, 3);
+        const portalMat = new THREE.MeshStandardMaterial({ color: 0x423125, roughness: 0.95 });
+        const portal = new THREE.Mesh(portalGeo, portalMat);
+        portal.position.set(0, 2.75, -18);
+        minaGroup.add(portal);
+
+        const fundoGeo = new THREE.BoxGeometry(5.4, 5.2, 0.5);
+        const fundoMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
+        const fundo = new THREE.Mesh(fundoGeo, fundoMat);
+        fundo.position.set(0, 2.6, -16.8);
+        minaGroup.add(fundo);
+
+        // Vigas de Madeira de Sustentação da Entrada
+        const vigaMat = new THREE.MeshStandardMaterial({ color: 0x5a3d28, roughness: 0.9 });
+        const vigaH = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.5, 0.6), vigaMat); vigaH.position.set(0, 5.4, -16.3); vigaH.castShadow = true; minaGroup.add(vigaH);
+        const vigaL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 5.4, 0.6), vigaMat); vigaL.position.set(-3.1, 2.7, -16.3); vigaL.castShadow = true; minaGroup.add(vigaL);
+        const vigaR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 5.4, 0.6), vigaMat); vigaR.position.set(3.1, 2.7, -16.3); vigaR.castShadow = true; minaGroup.add(vigaR);
+
+        // Trilhos de ferro saindo da mina
+        const ferroMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, metalness: 0.7, roughness: 0.2 });
+        const trilhoL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 14), ferroMat); trilhoL.position.set(-1.0, 0.05, -10); trilhoL.receiveShadow = true; minaGroup.add(trilhoL);
+        const trilhoR = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 14), ferroMat); trilhoR.position.set(1.0, 0.05, -10); trilhoR.receiveShadow = true; minaGroup.add(trilhoR);
+        scene.add(minaGroup);
+
+        // Mesas de Madeira para Triagem
+        function criarMesa(x, z) {
+            const mesa = new THREE.Group();
+            const tampoGeo = new THREE.BoxGeometry(4.5, 0.3, 2.8);
+            const madeiraMat = new THREE.MeshStandardMaterial({ color: 0x513724, roughness: 0.85 });
+            const tampo = new THREE.Mesh(tampoGeo, madeiraMat); tampo.position.y = 1.4; tampo.castShadow = true; tampo.receiveShadow = true; mesa.add(tampo);
+            const peGeo = new THREE.BoxGeometry(0.3, 1.4, 0.3);
+            const posPes = [[1.9, 1.2], [-1.9, 1.2], [1.9, -1.2], [-1.9, -1.2]];
+            posPes.forEach(pos => {
+                const pe = new THREE.Mesh(peGeo, madeiraMat); pe.position.set(pos[0], 0.7, pos[1]); pe.castShadow = true; mesa.add(pe);
+            });
+            mesa.position.set(x, 0, z); scene.add(mesa);
+        }
+        criarMesa(-6, -5); criarMesa(6, -5);
+
+        // --- 7. MODELAGEM DA ANATOMIA HUMANA (HUMAN LOW-POLY) ---
+        const trabalhadores = [];
+
+        function criarMineradorHumano(x, z, rY) {
+            const boneco = new THREE.Group();
+            
+            // Materiais anatômicos
+            const peleMat = new THREE.MeshStandardMaterial({ color: 0xe0a96d, roughness: 0.6 }); // Pele
+            const camisaMat = new THREE.MeshStandardMaterial({ color: 0xd35400, roughness: 0.7 }); // Camisa Laranja
+            const calcaMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.7 }); // Calça Azul Escuro
+            const botaMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.8 }); // Botas Marrons
+            const capaceteMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.4, metalness: 0.2 }); // Capacete Amarelo
+            const ferramentaMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, metalness: 0.8, roughness: 0.3 }); // Ferro da Picareta
+
+            // Pés e Pernas (Esquerda e Direita)
+            const peGeo = new THREE.BoxGeometry(0.3, 0.2, 0.5);
+            const pernaGeo = new THREE.BoxGeometry(0.28, 0.8, 0.28);
+            const coxaGeo = new THREE.BoxGeometry(0.32, 0.9, 0.32);
+
+            // Perna Esquerda
+            const pEsqGroup = new THREE.Group(); pEsqGroup.position.set(-0.35, 0.9, 0);
+            const coxaE = new THREE.Mesh(coxaGeo, calcaMat); coxaE.position.y = -0.45; coxaE.castShadow = true; pEsqGroup.add(coxaE);
+            const pernaE = new THREE.Mesh(pernaGeo, calcaMat); pernaE.position.set(0, -1.2, 0); pernaE.castShadow = true; pEsqGroup.add(pernaE);
+            const peE = new THREE.Mesh(peGeo, botaMat); peE.position.set(0, -1.6, 0.1); peE.castShadow = true; pEsqGroup.add(peE);
+            boneco.add(pEsqGroup);
+
+            // Perna Direita
+            const pDirGroup = new THREE.Group(); pDirGroup.position.set(0.35, 0.9, 0);
+            const coxaD = new THREE.Mesh(coxaGeo, calcaMat); coxaD.position.y = -0.45; coxaD.castShadow = true; pDirGroup.add(coxaD);
+            const pernaD = new THREE.Mesh(pernaGeo, calcaMat); pernaD.position.set(0, -1.2, 0); pernaD.castShadow = true; pDirGroup.add(pernaD);
+            const peD = new THREE.Mesh(peGeo, botaMat); peD.position.set(0, -1.6, 0.1); peD.castShadow = true; pDirGroup.add(peD);
+            boneco.add(pDirGroup);
+
+            // Tronco (Quadril, Lombar, Peito e Ombros)
+            const troncoGroup = new THREE.Group(); troncoGroup.position.set(0, 0.9, 0);
+            const quadril = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 0.5), calcaMat); quadril.position.y = 0.15; quadril.castShadow = true; troncoGroup.add(quadril);
+            const peito = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.1, 0.6), camisaMat); peito.position.y = 0.85; peito.castShadow = true; troncoGroup.add(peito);
+            boneco.add(troncoGroup);
+
+            // Pescoço, Cabeça e Capacete com Aba
+            const pescoço = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.18, 0.2, 12), peleMat); pescoço.position.set(0, 2.1, 0); pescoço.castShadow = true; boneco.add(pescoço);
+            const cabGeo = new THREE.BoxGeometry(0.55, 0.55, 0.55);
+            const cabeca = new THREE.Mesh(cabGeo, peleMat); cabeca.position.set(0, 2.45, 0); cabeca.castShadow = true; boneco.add(cabeca);
+            
+            const capBase = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 0.3, 14), capaceteMat); capBase.position.set(0, 2.75, 0); capBase.castShadow = true; boneco.add(capBase);
+            const capAba = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.05, 0.9), capaceteMat); capAba.position.set(0, 2.65, 0.1); capAba.castShadow = true; boneco.add(capAba);
+
+            // Braço Esquerdo (Estático / Apoio)
+            const bEsqGroup = new THREE.Group(); bEsqGroup.position.set(-0.6, 1.9, 0);
+            const ombroE = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.6, 0.26), camisaMat); ombroE.position.y = -0.3; ombroE.castShadow = true; bEsqGroup.add(ombroE);
+            const antebraçoE = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.5, 0.22), peleMat); antebraçoE.position.set(0, -0.75, 0.1); antebraçoE.castShadow = true; bEsqGroup.add(antebraçoE);
+            const maoE = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.18), peleMat); maoE.position.set(0, -1.0, 0.1); bEsqGroup.add(maoE);
+            boneco.add(bEsqGroup);
+
+            // SISTEMA ARTICULADO DO BRAÇO DIREITO (Ombro -> Antebraço -> Mão -> Picareta)
+            const artOmbroD = new THREE.Group(); artOmbroD.position.set(0.6, 1.9, 0); // Articulação do Ombro
+            const ombroD = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.6, 0.26), camisaMat); ombroD.position.y = -0.3; ombroD.castShadow = true; artOmbroD.add(ombroD);
+
+            const artCotoveloD = new THREE.Group(); artCotoveloD.position.set(0, -0.6, 0); // Articulação do Cotovelo
+            const antebraçoD = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.5, 0.22), peleMat); antebraçoD.position.y = -0.25; antebraçoD.castShadow = true; artCotoveloD.add(antebraçoD);
+
+            const maoD = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.18), peleMat); maoD.position.y = -0.55; artCotoveloD.add(maoD);
+
+            // CONSTRUÇÃO DA PICARETA Realista de Mineração
+                      // CONSTRUÇÃO DA PICARETA REALISTA E PROPORCIONAL
+            const picareta = new THREE.Group();
+            picareta.position.set(0, -0.55, 0); 
+            picareta.rotation.x = Math.PI / 2; // Alinha com o punho do minerador
+
+            // Cabo de madeira (reduzido o comprimento de 1.8 para 1.1 para encaixar na mão)
+            const caboPicareta = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.1, 8), vigaMat);
+            caboPicareta.position.y = 0.1; 
+            caboPicareta.castShadow = true; 
+            picareta.add(caboPicareta);
+
+            // Grupo para segurar a cabeça de ferro da picareta
+            const cabecaFerro = new THREE.Group();
+            cabecaFerro.position.y = 0.55; // Coloca o ferro bem no topo do cabo
+
+            // Lâmina Esquerda (Cone esticado e levemente inclinado)
+            const laminaEsq = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.4, 4), ferramentaMat);
+            laminaEsq.position.x = -0.18;
+            laminaEsq.rotation.z = Math.PI / 2.3; // Curvatura leve para baixo
+            laminaEsq.castShadow = true;
+            cabecaFerro.add(laminaEsq);
+
+            // Lâmina Direita (Cone esticado para o outro lado)
+            const laminaDir = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.4, 4), ferramentaMat);
+            laminaDir.position.x = 0.18;
+            laminaDir.rotation.z = -Math.PI / 2.3; // Curvatura leve para baixo
+            laminaDir.castShadow = true;
+            cabecaFerro.add(laminaDir);
+
+            // Junção central (o "anel" de metal que prende o cabo)
+            const anelCentral = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.12, 8), ferramentaMat);
+            anelCentral.rotation.x = Math.PI / 2;
+            cabecaFerro.add(anelCentral);
+
+            picareta.add(cabecaFerro);
+
+            
+            artCotoveloD.add(picareta);
+            artOmbroD.add(artCotoveloD);
+            boneco.add(artOmbroD);
+
+            // Configura o posicionamento global no mapa
+            boneco.position.set(x, 1.6, z); boneco.rotation.y = rY;
+            scene.add(boneco);
+
+            // Guarda as referências das juntas e pernas para animar na parte 3
+            trabalhadores.push({
+                obj: boneco, jOmbroD: artOmbroD, jCotoveloD: artCotoveloD,
+                jPernaE: pEsqGroup, jPernaD: pDirGroup, tronco: troncoGroup,
+                offset: Math.random() * Math.PI * 2
+            });
+        }
+
+        // Posiciona os 4 mineradores em pontos estratégicos de escavação
+        criarMineradorHumano(-5.5, -3.5, Math.PI / 6); 
+        criarMineradorHumano(5.5, -3.5, -Math.PI / 6);
+        criarMineradorHumano(-2.5, -12, Math.PI / 3); 
+        criarMineradorHumano(2.5, -12, -Math.PI / 3);
+        
+        // --- 8. FUNÇÃO DE SPAWN COM SEGURANÇA E FLUXO ANTI-BUG ---
+        function spawnBall() {
+            const radius = typeof tamanhoEsfera !== 'undefined' ? tamanhoEsfera : 1.2;
+            
+            if (balls.length < 35) {
+                const ballGeo = new THREE.SphereGeometry(radius, 20, 20); 
+                const ballMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.85, roughness: 0.08 });
+                const mesh = new THREE.Mesh(ballGeo, ballMat);
+                mesh.castShadow = true; mesh.receiveShadow = true;
+                scene.add(mesh);
+
+                const ballShape = new CANNON.Sphere(radius);
+                const body = new CANNON.Body({ mass: 14, shape: ballShape, material: ballMaterial });
+
+                body.position.set((Math.random() - 0.5) * 4, 11, -5 + (Math.random() - 0.5) * 4);
+                body.velocity.set((Math.random() - 0.5) * 2, -4, 1 + (Math.random() - 0.5) * 2);
+                
+                body.isTouchGround = false; 
+
+                world.addBody(body);
+                balls.push({ mesh: mesh, body: body });
+            } else {
+                const esferaReciclada = balls.shift();
+                balls.push(esferaReciclada);
+
+                const mesh = esferaReciclada.mesh;
+                const body = esferaReciclada.body;
+
+                mesh.scale.set(radius / 1.2, radius / 1.2, radius / 1.2);
+                body.shapes[0].radius = radius;
+                body.shapes[0].updateBoundingSphereRadius();
+
+                body.position.set((Math.random() - 0.5) * 4, 11, -5 + (Math.random() - 0.5) * 4);
+                body.velocity.set((Math.random() - 0.5) * 2, -4, 1 + (Math.random() - 0.5) * 2);
+                body.angularVelocity.set(0,0,0);
+                body.isTouchGround = false; 
+            }
+        }
+
+        // --- 9. CONTROLES DE TOQUE E INTERAÇÃO ---
+        window.addEventListener('keydown', (e) => { if (e.code === 'Space') spawnBall(); });
+        document.getElementById('spawn-btn').addEventListener('pointerdown', (e) => { e.preventDefault(); spawnBall(); });
+
+        let isDragging = false; let previousPointerPosition = { x: 0, y: 0 };
+
+        window.addEventListener('pointerdown', (e) => {
+            if (e.target.id === 'spawn-btn' || e.target.id === 'btn-abrir-mercado' || e.target.tagName === 'BUTTON') return; 
+            isDragging = true; previousPointerPosition = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            const deltaX = e.clientX - previousPointerPosition.x;
+            const deltaY = e.clientY - previousPointerPosition.y;
+            targetTheta -= deltaX * sensitivity; targetPhi -= deltaY * sensitivity;
+            previousPointerPosition = { x: e.clientX, y: e.clientY };
+        });
+        window.addEventListener('pointerup', () => isDragging = false);
+
+        // --- 10. CRIAÇÃO DA INTERFACE DINÂMICA DO MERCADO ---
+        const placarDinheiro = document.createElement('div');
+        placarDinheiro.style.position = 'absolute'; placarDinheiro.style.top = '65px'; placarDinheiro.style.left = '10px';
+        placarDinheiro.style.color = '#ffd700'; placarDinheiro.style.fontSize = '2.2rem'; placarDinheiro.style.fontWeight = 'bold';
+        placarDinheiro.style.textShadow = '2px 2px 5px black'; placarDinheiro.style.zIndex = '100';
+        placarDinheiro.innerText = 'R$ 0'; document.body.appendChild(placarDinheiro);
+
+        const painelMercado = document.createElement('div');
+        painelMercado.id = 'painel-mercado';
+        document.body.appendChild(painelMercado);
+
+        const headerMercado = document.createElement('div');
+        headerMercado.className = 'mercado-header';
+        headerMercado.innerHTML = `<h2>CONTRATOS DA MINA</h2><div id="mercado-dinheiro" style="color:#2ecc71; font-weight:bold; font-size:1.2rem;">R$ 0</div>`;
+        painelMercado.appendChild(headerMercado);
+
+        const scrollMercado = document.createElement('div');
+        scrollMercado.className = 'mercado-scroll';
+        painelMercado.appendChild(scrollMercado);
+
+        function criarBotaoMercado() {
+            const btn = document.createElement('button');
+            btn.className = 'btn-upgrade'; scrollMercado.appendChild(btn); return btn;
+        }
+
+        const btnUpgradeValor = criarBotaoMercado();
+        const btnUpgradeAuto = criarBotaoMercado();
+        const btnUpgradeTamanho = criarBotaoMercado();
+        const btnUpgradeGravidade = criarBotaoMercado();
+        const btnUpgradeQuique = criarBotaoMercado();
+        const btnUpgradeAtrito = criarBotaoMercado();
+
+        const footerMercado = document.createElement('div');
+        footerMercado.className = 'mercado-footer';
+        footerMercado.innerHTML = `<button id="btn-voltar">⬅ VOLTAR AO VALE</button>`;
+        painelMercado.appendChild(footerMercado);
+
+        function atualizarUI() {
+            placarDinheiro.innerText = `R$ ${dinheiro}`;
+            document.getElementById('mercado-dinheiro').innerText = `R$ ${dinheiro}`;
+            
+            btnUpgradeValor.innerHTML = `Pureza do Ouro (+R$1)<br><span style="font-size:0.8rem;opacity:0.8;">Custo: R$ ${precoUpgradeValor} (Atual: R$ ${valorPorEsfera})</span>`;
+            btnUpgradeAuto.innerHTML = `Vagões Automáticos (+1/s)<br><span style="font-size:0.8rem;opacity:0.8;">Custo: R$ ${precoUpgradeAuto} (Atual: ${esferasPorSegundo}/s)</span>`;
+            btnUpgradeTamanho.innerHTML = `Pepitas Gigantes (+Tamanho)<br><span style="font-size:0.8rem;opacity:0.8;">Custo: R$ ${precoUpgradeTamanho} (Raio: ${tamanhoEsfera.toFixed(1)})</span>`;
+            btnUpgradeGravidade.innerHTML = `Pressão de Queda (+Velocidade)<br><span style="font-size:0.8rem;opacity:0.8;">Custo: R$ ${precoUpgradeGravidade} (Gravidade: ${nivelGravidade.toFixed(1)})</span>`;
+            btnUpgradeQuique.innerHTML = `Esteira Elástica (+Quique)<br><span style="font-size:0.8rem;opacity:0.8;">Custo: R$ ${precoUpgradeQuique} (Quique: ${(nivelQuique * 100).toFixed(0)}%)</span>`;
+            btnUpgradeAtrito.innerHTML = `Polimento do Chão (-Atrito)<br><span style="font-size:0.8rem;opacity:0.8;">Custo: R$ ${precoUpgradeAtrito} (Atrito: ${nivelAtrito.toFixed(2)})</span>`;
+            
+            const listaBotoes = [
+                {elemento: btnUpgradeValor, custo: precoUpgradeValor},
+                {elemento: btnUpgradeAuto, custo: precoUpgradeAuto},
+                {elemento: btnUpgradeTamanho, custo: precoUpgradeTamanho},
+                {elemento: btnUpgradeGravidade, custo: precoUpgradeGravidade},
+                {elemento: btnUpgradeQuique, custo: precoUpgradeQuique},
+                {elemento: btnUpgradeAtrito, custo: precoUpgradeAtrito}
+            ];
+            listaBotoes.forEach(item => { item.elemento.style.background = dinheiro >= item.custo ? '#2ecc71' : '#7f8c8d'; });
+        }
+        atualizarUI();
+
+        document.getElementById('btn-abrir-mercado').addEventListener('click', () => { atualizarUI(); painelMercado.style.display = 'flex'; });
+        document.getElementById('btn-voltar').addEventListener('click', () => { painelMercado.style.display = 'none'; });
+
+        btnUpgradeValor.addEventListener('click', () => {
+            if (dinheiro >= precoUpgradeValor) { dinheiro -= precoUpgradeValor; // Substitua o antigo aumento de dinheiro por esta linha:
+processarGanhoMineradora(valorPorEsfera);
+ precoUpgradeValor = Math.floor(precoUpgradeValor * 1.5);
+            // Salva o progresso do jogador a cada 3 segundos automaticamente
+setInterval(salvarProgressoDoJogador, 3000);
+
+            atualizarUI(); }
+        });
+        btnUpgradeAuto.addEventListener('click', () => {
+            if (dinheiro >= precoUpgradeAuto) { dinheiro -= precoUpgradeAuto; esferasPorSegundo += 1; precoUpgradeAuto = Math.floor(precoUpgradeAuto * 1.6); atualizarUI(); }
+        });
+        btnUpgradeTamanho.addEventListener('click', () => {
+            if (dinheiro >= precoUpgradeTamanho) { dinheiro -= precoUpgradeTamanho; tamanhoEsfera += 0.3; precoUpgradeTamanho = Math.floor(precoUpgradeTamanho * 1.7); atualizarUI(); }
+        });
+        btnUpgradeGravidade.addEventListener('click', () => {
+            if (dinheiro >= precoUpgradeGravidade) { dinheiro -= precoUpgradeGravidade; nivelGravidade += 3.0; world.gravity.set(0, -nivelGravidade, 0); precoUpgradeGravidade = Math.floor(precoUpgradeGravidade * 1.6); atualizarUI(); }
+        });
+        btnUpgradeQuique.addEventListener('click', () => {
+            if (dinheiro >= precoUpgradeQuique && nivelQuique < 0.85) {
+                dinheiro -= precoUpgradeQuique; nivelQuique += 0.08;
+                world.removeContactMaterial(contactMaterial);
+                contactMaterial = new CANNON.ContactMaterial(groundMaterial, ballMaterial, { friction: nivelAtrito, restitution: nivelQuique });
+                world.addContactMaterial(contactMaterial); precoUpgradeQuique = Math.floor(precoUpgradeQuique * 1.6); atualizarUI();
+            }
+        });
+        btnUpgradeAtrito.addEventListener('click', () => {
+            if (dinheiro >= precoUpgradeAtrito && nivelAtrito > 0.05) {
+                dinheiro -= precoUpgradeAtrito; nivelAtrito -= 0.06;
+                world.removeContactMaterial(contactMaterial);
+                contactMaterial = new CANNON.ContactMaterial(groundMaterial, ballMaterial, { friction: nivelAtrito, restitution: nivelQuique });
+                world.addContactMaterial(contactMaterial); precoUpgradeAtrito = Math.floor(precoUpgradeAtrito * 1.6); atualizarUI();
+            }
+        });
+
+        setInterval(() => {
+            if (esferasPorSegundo > 0) { for (let i = 0; i < esferasPorSegundo; i++) { setTimeout(spawnBall, i * 120); } }
+        }, 1000);
+
+        // --- 11. LOOP DE EXECUÇÃO E ANIMAÇÃO HUMANA ANATÔMICA ---
+        const timeStep = 1 / 60; let lastTime;
+
+        function animate(time) {
+            requestAnimationFrame(animate); updateCameraSmoothly(); 
+
+            // CÁLCULO DE ANIMAÇÃO DA ANATOMIA HUMANA (Sincronizada por Juntas)
+            const velocidadeGolpe = time * 0.006;
+            trabalhadores.forEach(t => {
+                // Onda senoidal para simular a preparação e a batida rígida
+                const onda = Math.sin(velocidadeGolpe + t.offset);
+                
+                // 1. Ombro levanta e abaixa
+                t.jOmbroD.rotation.x = -0.5 + onda * 0.9;
+                t.jOmbroD.rotation.z = 0.2 + Math.cos(velocidadeGolpe + t.offset) * 0.1;
+
+                // 2. Cotovelo flexiona de forma realista para trazer a picareta para perto
+                t.jCotoveloD.rotation.x = -0.4 + (onda > 0 ? onda * 0.5 : 0);
+
+                // 3. Tronco se curva levemente para frente acompanhando a força do golpe
+                t.tronco.rotation.x = 0.1 + onda * 0.15;
+
+                // 4. Pernas flexionam levemente para dar estabilidade na base
+                t.jPernaE.rotation.x = Math.abs(onda) * 0.1;
+                t.jPernaD.rotation.x = -Math.abs(onda) * 0.1;
+            });
+
+            if (lastTime !== undefined) {
+                world.step(timeStep);
+                balls.forEach(obj => {
+                    obj.mesh.position.copy(obj.body.position); obj.mesh.quaternion.copy(obj.body.quaternion);
+                    
+                    // Verificação estrita baseada no raio da esfera para evitar pontuação fantasma
+                    const raioAtual = obj.body.shapes[0].radius;
+                    if (obj.body.position.y <= (raioAtual + 0.15)) {
+                        if (!obj.body.isTouchGround) {
+    obj.body.isTouchGround = true; 
+    // 👇 CONECTA O SEU BOLSO PESSOAL E ATUALIZA TUDO NA HORA!
+    processarGanhoMineradora(valorPorEsfera);
+    atualizarUI();
+    atualizarPlacarSaldoPessoal();
+    atualizarUIIMperio();
+}
+
+                    } else if (obj.body.position.y > (raioAtual + 0.6)) {
+                        obj.body.isTouchGround = false;
+                    }
+                });
+            }
+            lastTime = time; renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+carregarProgressoDoJogador();
+atualizarUI(); // Garante que os textos e preços na tela atualizem com os dados salvos
+        // ========================================================
+        
+        // CONTROLADORES INTERATIVOS DO MENU CORRIGIDOS (FLUXO DIRETO)
+        // ========================================================
+        const telaMenu = document.getElementById('tela-menu-inicial');
+        const janelaCreditos = document.getElementById('janela-creditos');
+        const textoMenu = document.getElementById('texto-menu-dinamico');
+        
+        const btnAbrirOpcoes = document.getElementById('btn-abrir-opcoes');
+        const btnContinuar = document.getElementById('btn-continuar');
+        const btnReiniciar = document.getElementById('btn-reiniciar');
+
+        // Função para fechar o menu de forma suave e liberar o jogo
+        function fecharMenuComEfeito() {
+            telaMenu.style.opacity = '0';
+            setTimeout(() => { telaMenu.style.display = 'none'; }, 500);
+        }
+
+        // Transforma o botão principal nas duas opções (Continuar ou Reiniciar)
+        btnAbrirOpcoes.addEventListener('click', () => {
+            btnAbrirOpcoes.style.display = 'none';
+            textoMenu.innerText = "Escolha como deseja prosseguir com as operações no canyon:";
+            btnContinuar.style.display = 'block';
+            btnReiniciar.style.display = 'block';
+        });
+
+        // 🟢 BOTAO CONTINUAR: Carrega o último save e entra direto
+        btnContinuar.addEventListener('click', () => {
+          atualizarPlacarSaldoPessoal();
+
+            if (typeof carregarProgressoDoJogador === 'function') {
+                carregarProgressoDoJogador();
+            }
+            if (typeof atualizarUI === 'function') {
+                atualizarUI();
+            }
+            fecharMenuComEfeito();
+            // --- FORÇADOR DE RENDERIZAÇÃO E ATIVAÇÃO DO MOTOR GRÁFICO ---
+try {
+    // 1. Força o renderizador a desenhar o cenário atual na GPU imediatamente
+    if (typeof renderer !== 'undefined' && typeof scene !== 'undefined' && typeof camera !== 'undefined') {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.render(scene, camera);
+    }
+
+    // 2. Dispara um evento falso de redimensionamento para recalcular a lente da câmera 3D
+    window.dispatchEvent(new Event('resize'));
+
+    // 3. Reativa manualmente o loop de animação caso ele tenha congelado
+    if (typeof animate === 'function') {
+        requestAnimationFrame(animate);
+    }
+    
+    console.log("🚀 Motor gráfico reativado com sucesso!");
+} catch (erroGrafico) {
+    console.warn("Aviso ao forçar renderização: ", erroGrafico);
+}
+// -------------------------------------------------------------
+
+        });
+
+        // 🔴 BOTAO REINICIAR: Apaga tudo, limpa o mapa e entra DIRETO
+        btnReiniciar.addEventListener('click', () => {
+            const confirmacao = confirm("Atenção Engenheiro! Tem certeza que deseja apagar todo o seu progresso? O jogo reiniciará do zero imediatamente.");
+            
+            if (confirmacao) {
+                // 1. Limpa o LocalStorage do navegador
+                try {
+                    localStorage.clear();
+                } catch(e) { console.log("Erro ao limpar armazenamento."); }
+
+                // 2. Remove TODAS as esferas antigas que estavam rodando na tela e na física
+                while(balls.length > 0) {
+                    const esfera = balls.pop();
+                    scene.remove(esfera.mesh);       // Deleta do visual 3D
+                    world.removeBody(esfera.body);   // Deleta do motor físico
+                }
+
+                // 3. Reseta os valores numéricos no código para o padrão inicial
+                dinheiro = 0; 
+                valorPorEsfera = 1; 
+                esferasPorSegundo = 0;   
+                precoUpgradeValor = 50; 
+                precoUpgradeAuto = 50;   
+                tamanhoEsfera = 1.2; 
+                precoUpgradeTamanho = 150;  
+                nivelGravidade = 12.0; 
+                precoUpgradeGravidade = 100;
+                nivelQuique = 0.25; 
+                precoUpgradeQuique = 120;
+                nivelAtrito = 0.4; 
+                precoUpgradeAtrito = 80;
+
+                // 4. Aplica o reset de gravidade e atrito no motor físico Cannon.js
+                if (typeof world !== 'undefined') {
+                    world.gravity.set(0, -nivelGravidade, 0);
+                    if (typeof contactMaterial !== 'undefined' && typeof groundMaterial !== 'undefined' && typeof ballMaterial !== 'undefined') {
+                        world.removeContactMaterial(contactMaterial);
+                        contactMaterial = new CANNON.ContactMaterial(groundMaterial, ballMaterial, { friction: nivelAtrito, restitution: nivelQuique });
+                        world.addContactMaterial(contactMaterial);
+                    }
+                }
+
+                // 5. Força a Interface Gráfica (UI) a se atualizar com os valores resetados na hora
+                if (typeof atualizarUI === 'function') {
+                    atualizarUI();
+                }
+
+                // 6. Grava o estado zerado por cima para consolidar o reset na memória
+                if (typeof salvarProgressoDoJogador === 'function') {
+                    salvarProgressoDoJogador();
+                }
+                
+                // 7. ENTRA DIRETO NO JOGO (Esconde o menu sem precisar clicar em continuar)
+                fecharMenuComEfeito();
+            }
+        });
+
+        // Controle da Janela de Créditos
+        document.getElementById('btn-creditos').addEventListener('click', () => {
+            janelaCreditos.style.display = 'block';
+            setTimeout(() => { janelaCreditos.style.transform = 'translate(-50%, -50%) scale(1)'; }, 10);
+        });
+
+        document.getElementById('btn-fechar-creditos').addEventListener('click', () => {
+            janelaCreditos.style.transform = 'translate(-50%, -50%) scale(0.9)';
+            setTimeout(() => { janelaCreditos.style.display = 'none'; }, 150);
+        });
+
+        requestAnimationFrame(animate);
+        // ========================================================
+// REPOSITÓRIO CENTRAL DE MEMÓRIA (SALVAMENTO AUTOMÁTICO)
+// ========================================================
+
+function carregarProgressoDoJogador() {
+    try {
+        if (!localStorage.getItem('min_dinheiro')) return; // Se não tem jogo salvo, começa do zero
+
+        // 1. Carrega os dados básicos da Mineradora
+        dinheiro = parseFloat(localStorage.getItem('min_dinheiro')) || 0;
+        valorPorEsfera = parseInt(localStorage.getItem('min_valorPorEsfera')) || 1;      
+        esferasPorSegundo = parseInt(localStorage.getItem('min_esferasPorSegundo')) || 0;   
+        precoUpgradeValor = parseInt(localStorage.getItem('min_precoUpgradeValor')) || 50;  
+        precoUpgradeAuto = parseInt(localStorage.getItem('min_precoUpgradeAuto')) || 50;   
+        tamanhoEsfera = parseFloat(localStorage.getItem('min_tamanhoEsfera')) || 1.2;       
+        precoUpgradeTamanho = parseInt(localStorage.getItem('min_precoUpgradeTamanho')) || 150;  
+        nivelGravidade = parseFloat(localStorage.getItem('min_nivelGravidade')) || 12.0; 
+        precoUpgradeGravidade = parseInt(localStorage.getItem('min_precoUpgradeGravidade')) || 100;
+        nivelQuique = parseFloat(localStorage.getItem('min_nivelQuique')) || 0.25;
+        precoUpgradeQuique = parseInt(localStorage.getItem('min_precoUpgradeQuique')) || 120;
+        nivelAtrito = parseFloat(localStorage.getItem('min_nivelAtrito')) || 0.4;
+        precoUpgradeAtrito = parseInt(localStorage.getItem('min_precoUpgradeAtrito')) || 80;
+      
+        // 2. Carrega os dados do Império e Saldo Pessoal
+        saldoPessoal = parseFloat(localStorage.getItem('min_saldoPessoal')) || 0;
+        faturamentoAcumulado = parseFloat(localStorage.getItem('min_faturamentoAcumulado')) || 0;
+        mineradoraAtual = localStorage.getItem('min_mineradoraAtual') || "canyon";
+        
+        const salvamentoMapas = localStorage.getItem('min_mapasComprados');
+        if (salvamentoMapas) {
+            mapasComprados = JSON.parse(salvamentoMapas);
+        }
+
+        if (catalogoMineradoras[mineradoraAtual]) {
+            multiplicadorMapa = catalogoMineradoras[mineradoraAtual].multiplicador;
+            // Atualiza visualmente o mapa atual após o carregamento do cenário
+            setTimeout(() => { 
+                if (typeof viajarParaMineradora === 'function') {
+                    viajarParaMineradora(mineradoraAtual); 
+                }
+            }, 800);
+        }
+
+        // 3. Reaplica as configurações de física no motor Cannon.js
+        if (typeof world !== 'undefined') {
+            world.gravity.set(0, -nivelGravidade, 0);
+            if (typeof contactMaterial !== 'undefined' && typeof groundMaterial !== 'undefined' && typeof ballMaterial !== 'undefined') {
+                world.removeContactMaterial(contactMaterial);
+                contactMaterial = new CANNON.ContactMaterial(groundMaterial, ballMaterial, { friction: nivelAtrito, restitution: nivelQuique });
+                world.addContactMaterial(contactMaterial);
+            }
+        }
+        
+        // 4. Margem de segurança de 500ms para atualizar o placar sem conflitar com a leitura dos botões do menu
+        setTimeout(() => {
+            if (typeof atualizarPlacarSaldoPessoal === 'function') {
+                atualizarPlacarSaldoPessoal();
+            }
+        }, 500);
+
+    } catch (e) {
+        console.warn("Aba anônima ou restrição do navegador detectada. O jogo vai rodar sem salvar.", e);
+    }
+}
+
+
+function salvarProgressoDoJogador() {
+    try {
+        localStorage.setItem('min_dinheiro', dinheiro);
+        localStorage.setItem('min_valorPorEsfera', valorPorEsfera);
+        localStorage.setItem('min_esferasPorSegundo', esferasPorSegundo);
+        localStorage.setItem('min_precoUpgradeValor', precoUpgradeValor);
+        localStorage.setItem('min_precoUpgradeAuto', precoUpgradeAuto);
+        localStorage.setItem('min_tamanhoEsfera', tamanhoEsfera);
+        localStorage.setItem('min_precoUpgradeTamanho', precoUpgradeTamanho);
+        localStorage.setItem('min_nivelGravidade', nivelGravidade);
+        localStorage.setItem('min_precoUpgradeGravidade', precoUpgradeGravidade);
+        localStorage.setItem('min_nivelQuique', nivelQuique);
+        localStorage.setItem('min_precoUpgradeQuique', precoUpgradeQuique);
+        localStorage.setItem('min_nivelAtrito', nivelAtrito);
+        localStorage.setItem('min_precoUpgradeAtrito', precoUpgradeAtrito);
+        
+        
+        // 👇 NOVAS LINHAS ADICIONADAS PARA O IMPÉRIO
+        localStorage.setItem('min_saldoPessoal', saldoPessoal);
+        localStorage.setItem('min_faturamentoAcumulado', faturamentoAcumulado);
+        localStorage.setItem('min_mineradoraAtual', mineradoraAtual);
+        localStorage.setItem('min_mapasComprados', JSON.stringify(mapasComprados));
+    } catch (e) {
+        // Ignora silenciosamente se o navegador bloquear a gravação
+    }
+}
+
+// ========================================================
+// Exibe o Saldo Pessoal tanto no Menu quanto no Placar Fixo da Tela
+function atualizarPlacarSaldoPessoal() {
+    // Texto formatado em formato de moeda real (R$ X,XX)
+    const textoFormatado = `R$ ${saldoPessoal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    
+    // 1. Atualiza o mostrador dentro do Menu Inicial
+    const elSaldoMenu = document.getElementById('menu-saldo-pessoal');
+    if (elSaldoMenu) { elSaldoMenu.innerText = textoFormatado; }
+    
+    // 2. Atualiza o novo mostrador que fica na tela durante o jogo!
+    const elSaldoDireto = document.getElementById('contador-saldo-direto');
+    if (elSaldoDireto) { elSaldoDireto.innerText = textoFormatado; }
+}
+
+    </script>
